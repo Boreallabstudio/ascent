@@ -34,6 +34,11 @@
       </section>
       <section class="site-player" aria-label="Player">
         <p class="site-cue" aria-hidden="true"><i></i>Press Launch</p>
+        <div class="site-lang" role="group" aria-label="Player language">
+          <button type="button" data-lang="en" aria-pressed="true">EN</button>
+          <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+          <button type="button" data-lang="es" aria-pressed="false">ES</button>
+        </div>
         <div id="player"></div>
       </section>
       <section class="site-parts" aria-labelledby="parts">
@@ -67,7 +72,7 @@
   &lt;!-- src/video/skin.html, with the placeholder replaced by: --&gt;
   &lt;mux-video playsinline crossorigin="anonymous"&gt;
     &lt;track kind="chapters" srclang="en" src="chapters.vtt" default&gt;
-    &lt;track kind="captions" srclang="en" src="captions.vtt" default&gt;
+    &lt;track kind="captions" srclang="en" src="captions.vtt"&gt;
   &lt;/mux-video&gt;
 &lt;/video-player&gt;</code></pre>
       </section>

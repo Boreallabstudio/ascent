@@ -60,14 +60,6 @@ export function clock(seconds: number, round: (x: number) => number = Math.floor
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Time in words, for accessible names. */
-export function spoken(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m ? `${m} ${m === 1 ? 'minute' : 'minutes'} ` : ''}${r} ${r === 1 ? 'second' : 'seconds'}`;
-}
-
 /** Playback rate as the skin writes it: 1.0×, 1.25×, 0.5×. */
 export function rateText(rate: number): string {
   return `${rate.toFixed((rate * 4) % 2 ? 2 : 1)}×`;

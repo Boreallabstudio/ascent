@@ -174,6 +174,47 @@ a:focus-visible {
   transform: translateY(-4px);
 }
 
+/* Player language, across from the cue: three small keys. */
+.site-lang {
+  position: absolute;
+  top: -31px;
+  right: var(--gutter);
+  display: flex;
+  gap: 2px;
+}
+
+.site-lang button {
+  min-width: 34px;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--dim);
+  font: 400 11px var(--mono);
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.site-lang button:hover {
+  color: var(--ink);
+}
+
+.site-lang button:active {
+  transform: scale(0.96);
+}
+
+.site-lang button[aria-pressed='true'] {
+  border-color: var(--rule);
+  color: var(--ink);
+}
+
+.site-lang button:focus-visible {
+  outline: 2px solid var(--burn);
+  outline-offset: 2px;
+}
+
 media-i18n,
 video-player {
   display: contents;
@@ -335,5 +376,9 @@ kbd {
   .site-player,
   .site-cue i {
     animation: none;
+  }
+
+  .site-lang button {
+    transition: none;
   }
 }

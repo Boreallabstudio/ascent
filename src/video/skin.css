@@ -1456,7 +1456,8 @@ ascent-engine:hover .pm {
 }
 
 .asc-jet .asc-thr-read::before {
-  content: 'Vol';
+  /* The word is set by <ascent-engine> in the player's language. */
+  content: var(--asc-dial-word, 'Vol');
   display: block;
   margin-bottom: 2px;
   font-size: 0.72em;
@@ -1466,7 +1467,7 @@ ascent-engine:hover .pm {
 }
 
 .asc-jet.spd .asc-thr-read::before {
-  content: 'Rate';
+  content: var(--asc-dial-word, 'Rate');
 }
 
 @container (min-width: 900px) {

@@ -14,7 +14,7 @@
 <span class="asc-feed-card">
 <span class="asc-feed-cam">
 <media-slider-thumbnail class="asc-feed-img"></media-slider-thumbnail>
-<i class="lab">Track cam</i>
+<i class="lab"><media-text token="ascent.feed.cam">Track cam</media-text></i>
 </span>
 <span class="asc-feed-read"><b class="num asc-feed-t"></b><span class="lab asc-feed-ev"></span></span>
 </span>
@@ -31,7 +31,7 @@
 <ascent-board class="asc-board"></ascent-board>
 <div class="asc-row">
 <div class="asc-mod">
-<i class="asc-mh" aria-hidden="true">Flight</i>
+<i class="asc-mh" aria-hidden="true"><media-text token="ascent.mod.flight">Flight</media-text></i>
 <media-play-button class="asc-b play">
 <span class="asc-ic">
 <svg class="asc-i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4.5v15l12-7.5z"/></svg>
@@ -39,11 +39,11 @@
 <svg class="asc-i-replay" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 8.25A7.5 7.5 0 1 1 4.5 12"/><path d="M5.5 3.8v4.45h4.45"/></svg>
 </span>
 <ascent-play-label class="asc-kl" aria-hidden="true"></ascent-play-label>
-<span class="asc-tip" aria-hidden="true"><span class="tip-run">Play or pause</span><span class="tip-end">Play again</span> <kbd>Space</kbd></span>
+<span class="asc-tip" aria-hidden="true"><span class="tip-run"><media-text token="ascent.tip.play">Play or pause</media-text></span><span class="tip-end"><media-text token="ascent.tip.again">Play again</media-text></span> <kbd><media-text token="ascent.key.space">Space</media-text></kbd></span>
 </media-play-button>
 </div>
 <div class="asc-mod">
-<i class="asc-mh" aria-hidden="true">Propulsion</i>
+<i class="asc-mh" aria-hidden="true"><media-text token="ascent.mod.propulsion">Propulsion</media-text></i>
 <span class="asc-wrap vol">
 <media-mute-button class="asc-b mute">
 <i aria-hidden="true"></i>
@@ -59,7 +59,7 @@
 <media-volume-slider class="asc-thr-hit">
 <media-slider-thumb class="asc-thr-thumb"></media-slider-thumb>
 </media-volume-slider>
-<span class="asc-tip" aria-hidden="true">Volume: turn or scroll <kbd>↑</kbd><kbd>↓</kbd></span>
+<span class="asc-tip" aria-hidden="true"><media-text token="ascent.tip.volume">Volume: turn or scroll</media-text> <kbd>↑</kbd><kbd>↓</kbd></span>
 </ascent-engine>
 <span class="asc-wrap spd">
 <media-playback-rate-button class="asc-b rate">
@@ -68,31 +68,31 @@
 <ascent-engine class="asc-pop" kind="speed" size="pop"></ascent-engine>
 </span>
 <ascent-engine class="asc-jet spd" kind="speed" size="jet">
-<span class="asc-tip" aria-hidden="true">Speed: turn or scroll <kbd>&lt;</kbd><kbd>&gt;</kbd></span>
+<span class="asc-tip" aria-hidden="true"><media-text token="ascent.tip.speed">Speed: turn or scroll</media-text> <kbd>&lt;</kbd><kbd>&gt;</kbd></span>
 </ascent-engine>
 </div>
 <div class="asc-mod">
-<i class="asc-mh" aria-hidden="true">Comms</i>
+<i class="asc-mh" aria-hidden="true"><media-text token="ascent.mod.comms">Comms</media-text></i>
 <media-captions-button class="asc-b cc">
 <i aria-hidden="true"></i>
-<span class="asc-tip" aria-hidden="true">Captions <kbd>C</kbd></span>
+<span class="asc-tip" aria-hidden="true"><media-text token="ascent.tip.captions">Captions</media-text> <kbd>C</kbd></span>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5h18v13H3zM10.6 10.4a2.2 2.2 0 1 0 0 3.2M17 10.4a2.2 2.2 0 1 0 0 3.2"/></svg>
 </media-captions-button>
 </div>
 <div class="asc-mod">
-<i class="asc-mh" aria-hidden="true">Screen</i>
+<i class="asc-mh" aria-hidden="true"><media-text token="ascent.mod.screen">Screen</media-text></i>
 <media-pip-button class="asc-b pip">
 <i aria-hidden="true"></i>
-<span class="asc-tip" aria-hidden="true">Picture in picture <kbd>P</kbd></span>
+<span class="asc-tip" aria-hidden="true"><media-text token="ascent.tip.pip">Picture in picture</media-text> <kbd>P</kbd></span>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5h18v13H3z"/><path class="asc-pip-win" d="M12.5 12h6v4.5h-6z"/></svg>
 </media-pip-button>
 <media-fullscreen-button class="asc-b full">
 <i aria-hidden="true"></i>
-<span class="asc-tip" aria-hidden="true">Full screen <kbd>F</kbd></span>
+<span class="asc-tip" aria-hidden="true"><media-text token="ascent.tip.full">Full screen</media-text> <kbd>F</kbd></span>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
 </media-fullscreen-button>
 <button type="button" class="asc-b man" data-asc-manual aria-haspopup="dialog" aria-label="Keyboard shortcuts">
-<span class="asc-tip" aria-hidden="true">Keys <kbd>?</kbd></span>
+<span class="asc-tip" aria-hidden="true"><media-text token="ascent.tip.keys">Keys</media-text> <kbd>?</kbd></span>
 <b aria-hidden="true">?</b>
 </button>
 </div>
@@ -110,7 +110,7 @@
 <media-dialog-backdrop class="asc-dialog-backdrop">
 </media-dialog-backdrop>
 <media-dialog-popup class="asc-dialog">
-<span class="lab asc-dialog-kicker" aria-hidden="true">Signal lost</span>
+<span class="lab asc-dialog-kicker" aria-hidden="true"><media-text token="ascent.error.kicker">Signal lost</media-text></span>
 <media-dialog-title class="lab asc-dialog-title">
 </media-dialog-title>
 <media-dialog-description class="asc-dialog-description">

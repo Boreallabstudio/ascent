@@ -60,7 +60,7 @@ Put your media in place of the placeholder in `src/video/skin.html`, inside a Vi
   <!-- src/video/skin.html, with the placeholder replaced by: -->
   <mux-video playsinline preload="metadata" crossorigin="anonymous">
     <track kind="chapters" srclang="en" label="Events" src="chapters.vtt" default>
-    <track kind="captions" srclang="en" label="English" src="captions.vtt" default>
+    <track kind="captions" srclang="en" label="English" src="captions.vtt">
     <track kind="metadata" label="thumbnails" src="https://image.mux.com/YOUR_PLAYBACK_ID/storyboard.vtt" default>
   </mux-video>
 </video-player>

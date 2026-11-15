@@ -19,7 +19,7 @@ export function createPlayer(): HTMLElement {
     MEDIA_PLACEHOLDER,
     `<mux-video playsinline preload="metadata" crossorigin="anonymous">
       <track kind="chapters" label="Events" srclang="en" src="./media/charge-chapters.vtt" default>
-      <track kind="captions" label="English" srclang="en" src="./media/charge-captions.vtt" default>
+      <track kind="captions" label="English" srclang="en" src="./media/charge-captions.vtt">
       <track kind="metadata" label="thumbnails" src="https://image.mux.com/${MUX_PLAYBACK_ID}/storyboard.vtt" default>
     </mux-video>`
   );

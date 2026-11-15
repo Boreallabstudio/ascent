@@ -27,8 +27,8 @@ import {
   rateText,
   reducedMotion,
   skinRoot,
-  spoken,
 } from './flight';
+import { type WordKey, Words } from './words';
 
 const SVG = 'http://www.w3.org/2000/svg';
 let uid = 0;
@@ -665,6 +665,7 @@ class AscentFlightElement extends PathElement {
  */
 class AscentEventsElement extends PathElement {
   #playback = new PlayerController(this, playerContext, selectPlayback);
+  #words = new Words(this);
   #buttons: HTMLButtonElement[] = [];
   #signature = '';
 
@@ -702,7 +703,10 @@ class AscentEventsElement extends PathElement {
       plate.className = 'plate';
       plate.append(name, mark);
       button.append(plate);
-      button.setAttribute('aria-label', `Jump to event ${i + 1}, ${chapter.text}, at ${spoken(chapter.startTime)}`);
+      button.setAttribute(
+        'aria-label',
+        this.#words.say('event.name', { n: i + 1, name: chapter.text, time: this.#words.spoken(chapter.startTime) })
+      );
       this.append(button);
       return button;
     });
@@ -783,7 +787,7 @@ class AscentEventsElement extends PathElement {
   protected draw() {
     const duration = this.duration;
     const chapters = duration > 0 ? this.chapters : [];
-    const signature = chapters.map((c) => `${c.startTime}|${c.text}`).join('\n');
+    const signature = `${this.#words.locale}\n${chapters.map((c) => `${c.startTime}|${c.text}`).join('\n')}`;
     if (signature !== this.#signature) {
       this.#signature = signature;
       this.#render(chapters);
@@ -872,6 +876,7 @@ class AscentNowElement extends UIElement {
   #time = new PlayerController(this, playerContext, selectTime);
   #playback = new PlayerController(this, playerContext, selectPlayback);
   #tracks = new PlayerController(this, playerContext, selectTextTrack);
+  #words = new Words(this);
   #count?: HTMLElement;
   #name?: HTMLElement;
 
@@ -897,8 +902,15 @@ class AscentNowElement extends UIElement {
     // own story did at its end.
     const ended = Boolean(this.#playback.value?.ended);
     const orbiting = inOrbit(chapters, this.#time.value?.currentTime ?? 0, ended);
-    setWords(this.#count, ended ? 'Flight complete' : `Event ${pad2(index + 1)} of ${pad2(chapters.length)}`);
-    setWords(this.#name, orbiting ? `${ended ? '' : `${chapters[index].text} · `}Parking orbit` : chapters[index].text);
+    const say = this.#words;
+    setWords(
+      this.#count,
+      ended ? say.say('now.complete') : say.say('now.event', { n: pad2(index + 1), total: pad2(chapters.length) })
+    );
+    setWords(
+      this.#name,
+      orbiting ? `${ended ? '' : `${chapters[index].text} · `}${say.say('now.orbit')}` : chapters[index].text
+    );
   }
 }
 
@@ -1034,6 +1046,7 @@ class AscentEngineElement extends UIElement {
 
   #volume = new PlayerController(this, playerContext, selectVolume);
   #rate = new PlayerController(this, playerContext, selectPlaybackRate);
+  #words = new Words(this);
   #drawing: DialDrawing | null = null;
   #abort: AbortController | null = null;
   #shown = -1;
@@ -1276,7 +1289,6 @@ class AscentEngineElement extends UIElement {
   #bindSpeed(signal: AbortSignal) {
     this.setAttribute('role', 'slider');
     this.setAttribute('tabindex', '0');
-    this.setAttribute('aria-label', 'Playback speed');
     this.setAttribute('aria-valuemin', '0.5');
     this.setAttribute('aria-valuemax', '2');
 
@@ -1300,13 +1312,16 @@ class AscentEngineElement extends UIElement {
   protected update(changed: PropertyValues) {
     super.update(changed);
     if (!this.#drawing) return;
+    const word = JSON.stringify(this.#words.say(this.#speed ? 'dial.rate' : 'dial.vol'));
+    if (this.style.getPropertyValue('--asc-dial-word') !== word) this.style.setProperty('--asc-dial-word', word);
     if (this.#speed) {
       const rate = this.#rate.value?.playbackRate ?? 1;
       if (this.#pending === rate) this.#pending = null;
       const f = (rate - 0.5) / 1.5;
       this.#show(f, rateText(Math.min(2, Math.max(0.5, rate))));
       this.setAttribute('aria-valuenow', String(rate));
-      this.setAttribute('aria-valuetext', `${rate} times`);
+      this.setAttribute('aria-label', this.#words.say('speed.name'));
+      this.setAttribute('aria-valuetext', this.#words.say('speed.value', { rate: this.#words.number(rate) }));
       this.hidden = this.#rate.value?.playbackRateAvailability === 'unsupported';
     } else {
       const volume = this.#volume.value;
@@ -1353,17 +1368,30 @@ class AscentRateElement extends UIElement {
 }
 
 /** <ascent-play-label>: the word on the play key. Launch before the film has started, Hold while it plays, Resume
- * when paused, Relaunch at the end. Decoration (`aria-hidden`): the `<media-play-button>` around it carries the name. */
+ * when paused, Relaunch at the end. Decoration (`aria-hidden`): the `<media-play-button>` around it carries the name,
+ * which this element sets so it contains the word ("Launch (play)"), for voice control and screen readers alike. */
+type PlayWord = 'launch' | 'hold' | 'resume' | 'relaunch';
+
 class AscentPlayLabelElement extends UIElement {
   #playback = new PlayerController(this, playerContext, selectPlayback);
   #time = new PlayerController(this, playerContext, selectTime);
+  #words = new Words(this);
+  #word: PlayWord = 'launch';
+  #spoken = '';
 
   protected update(changed: PropertyValues) {
     super.update(changed);
     const playback = this.#playback.value;
     const launched = (playback?.started ?? false) || (this.#time.value?.currentTime ?? 0) > 0.5;
-    const text = playback?.ended ? 'Relaunch' : playback && !playback.paused ? 'Hold' : launched ? 'Resume' : 'Launch';
-    setWords(this, text);
+    this.#word = playback?.ended ? 'relaunch' : playback && !playback.paused ? 'hold' : launched ? 'resume' : 'launch';
+    setWords(this, this.#words.say(`play.${this.#word}`));
+    const button = this.closest('media-play-button') as (HTMLElement & { label: unknown; requestUpdate(): void }) | null;
+    const spoken = this.#words.say(`play.${this.#word}.name`);
+    if (button && spoken !== this.#spoken) {
+      this.#spoken = spoken;
+      button.label = spoken;
+      button.requestUpdate();
+    }
   }
 }
 
@@ -1414,6 +1442,7 @@ class AscentBoardElement extends UIElement {
   #volume = new PlayerController(this, playerContext, selectVolume);
   #tracks = new PlayerController(this, playerContext, selectTextTrack);
   #error = new PlayerController(this, playerContext, selectError);
+  #words = new Words(this);
   #cells: Record<string, HTMLElement> = {};
   #watch: MutationObserver | null = null;
   #poll = 0;
@@ -1429,7 +1458,6 @@ class AscentBoardElement extends UIElement {
         const cell = document.createElement('span');
         cell.className = 'asc-cell';
         cell.append(document.createElement('i'), document.createElement('b'));
-        cell.firstElementChild!.textContent = name;
         this.#cells[name] = cell;
         this.append(cell);
       }
@@ -1502,24 +1530,43 @@ class AscentBoardElement extends UIElement {
     // and Locked once everything to the end of the film is loaded.
     const root = skinRoot(this);
     const link = downlink(root ? findMedia(root) : null);
-    if (lost) this.#set('Downlink', 'hold', 'Lost');
+    const say = (key: WordKey) => this.#words.say(key);
+    const names: Record<string, WordKey> = {
+      Downlink: 'board.downlink',
+      Audio: 'board.audio',
+      Captions: 'board.captions',
+      Flight: 'board.flight',
+    };
+    for (const [name, key] of Object.entries(names)) {
+      const label = this.#cells[name]?.firstElementChild;
+      if (label && label.textContent !== say(key)) label.textContent = say(key);
+    }
+    const go = say('board.go');
+    const off = say('board.off');
+    if (lost) this.#set('Downlink', 'hold', say('board.lost'));
     // During a hold, a rate measured before it would mislead: it shows only once a new reading comes in.
-    else if (held) this.#set('Downlink', 'hold', link.fresh ? `HOLD · ${link.rate}` : 'Hold', link.fresh);
-    else if (link.complete) this.#set('Downlink', 'go', 'Locked');
-    else this.#set('Downlink', 'go', link.rate || 'Go', Boolean(link.rate));
+    else if (held)
+      this.#set(
+        'Downlink',
+        'hold',
+        link.fresh ? `${say('board.hold').toLocaleUpperCase(this.#words.locale)} · ${link.rate}` : say('board.hold'),
+        link.fresh
+      );
+    else if (link.complete) this.#set('Downlink', 'go', say('board.locked'));
+    else this.#set('Downlink', 'go', link.rate || go, Boolean(link.rate));
     // Narrow players show the hold as a line under the title; it carries the rate too.
     const line = root?.querySelector('.asc-load span');
-    if (line) line.textContent = `Hold · buffering${held && link.fresh ? ` · ${link.rate}` : ''}`;
-    this.#set('Audio', quiet ? 'off' : 'go', quiet ? 'Off' : 'Go');
-    this.#set('Captions', captions ? 'go' : 'off', captions ? 'Go' : 'Off');
+    if (line) line.textContent = `${say('hold.line')}${held && link.fresh ? ` · ${link.rate}` : ''}`;
+    this.#set('Audio', quiet ? 'off' : 'go', quiet ? off : go);
+    this.#set('Captions', captions ? 'go' : 'off', captions ? go : off);
     if (this.#phase === 'standby' && playing) this.#runPoll();
     const flight = this.#cells.Flight;
     const polled = flight?.hasAttribute('data-polled') ?? false;
-    if (playback?.ended) this.#set('Flight', 'off', 'Complete');
-    else if (this.#phase === 'poll' && !polled) this.#set('Flight', 'off', 'Ready');
-    else if (playing) this.#set('Flight', 'go', 'Go');
-    else if (launched) this.#set('Flight', 'wait', 'Hold');
-    else this.#set('Flight', 'off', 'Ready');
+    if (playback?.ended) this.#set('Flight', 'off', say('board.complete'));
+    else if (this.#phase === 'poll' && !polled) this.#set('Flight', 'off', say('board.ready'));
+    else if (playing) this.#set('Flight', 'go', go);
+    else if (launched) this.#set('Flight', 'wait', say('board.hold'));
+    else this.#set('Flight', 'off', say('board.ready'));
     flight?.toggleAttribute('data-end', Boolean(playback?.ended));
   }
 }
@@ -1532,17 +1579,22 @@ class AscentBoardElement extends UIElement {
 class AscentNextElement extends UIElement {
   #time = new PlayerController(this, playerContext, selectTime);
   #tracks = new PlayerController(this, playerContext, selectTextTrack);
+  #words = new Words(this);
   #button?: HTMLButtonElement;
   #count?: HTMLElement;
   #name?: HTMLElement;
+  #head?: HTMLElement;
+  #tip?: HTMLElement;
 
   connectedCallback() {
     super.connectedCallback();
     if (this.#button) return;
-    this.innerHTML = `<i class="asc-mh" aria-hidden="true">Next event</i><button type="button" class="asc-nx"><b><span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5v13l9-6.5zM18.5 5.5v13"/></svg></b><span class="lab"></span><span class="asc-tip" aria-hidden="true">Skip to it <kbd>N</kbd></span></button>`;
+    this.innerHTML = `<i class="asc-mh" aria-hidden="true"></i><button type="button" class="asc-nx"><b><span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5v13l9-6.5zM18.5 5.5v13"/></svg></b><span class="lab"></span><span class="asc-tip" aria-hidden="true"><span></span> <kbd>N</kbd></span></button>`;
     this.#button = this.querySelector('button')!;
     this.#count = this.querySelector('b span')!;
     this.#name = this.querySelector('.lab')!;
+    this.#head = this.querySelector('.asc-mh')!;
+    this.#tip = this.querySelector('.asc-tip span')!;
     this.#button.addEventListener('click', () => this.skip());
   }
 
@@ -1564,17 +1616,19 @@ class AscentNextElement extends UIElement {
     const chapters = this.#tracks.value?.chaptersCues ?? [];
     this.hidden = !chapters.length;
     if (!chapters.length || !this.#button || !this.#count || !this.#name) return;
+    const words = this.#words;
+    if (this.#head) this.#head.textContent = words.say('mod.next');
+    if (this.#tip) this.#tip.textContent = words.say('tip.next');
     const time = this.#time.value;
     const duration = time && Number.isFinite(time.duration) && time.duration > 0 ? time.duration : chapters[chapters.length - 1].endTime;
     const next = this.#next;
     // Whole seconds on both sides, so the countdown and the clock always add up to the event (or the film's length).
     this.#count.textContent = `T− ${clock(Math.floor((next ? next.startTime : duration) + 1e-3) - Math.floor((time?.currentTime ?? 0) + 1e-3))}`;
-    const name = next ? next.text : 'End of film';
-    if (this.#name.textContent !== name) {
-      this.#name.textContent = name;
-      this.#button.disabled = !next;
-      this.#button.setAttribute('aria-label', next ? `Skip to the next event, ${next.text}` : 'No next event');
-    }
+    const name = next ? next.text : words.say('next.end');
+    if (this.#name.textContent !== name) this.#name.textContent = name;
+    this.#button.disabled = !next;
+    const spoken = next ? words.say('next.name', { name: next.text }) : words.say('next.none');
+    if (this.#button.getAttribute('aria-label') !== spoken) this.#button.setAttribute('aria-label', spoken);
   }
 }
 
@@ -1585,6 +1639,7 @@ class AscentNextElement extends UIElement {
 class AscentClockElement extends UIElement {
   #time = new PlayerController(this, playerContext, selectTime);
   #tracks = new PlayerController(this, playerContext, selectTextTrack);
+  #words = new Words(this);
   #next?: HTMLElement;
   #remaining = false;
   #button?: HTMLButtonElement;
@@ -1620,16 +1675,18 @@ class AscentClockElement extends UIElement {
     this.#digits.textContent = remaining
       ? `−${clock(Math.floor(duration + 1e-3) - Math.floor(Math.min(current, duration) + 1e-3))}`
       : clock(Math.min(current, duration));
-    this.#label.textContent = remaining ? `T− remaining · of ${clock(duration)}` : `T+ elapsed · of ${clock(duration)}`;
+    const words = this.#words;
+    this.#label.textContent = words.say(remaining ? 'clock.remaining' : 'clock.elapsed', { total: clock(duration) });
     if (this.#next) {
       const chapters = this.#tracks.value?.chaptersCues ?? [];
       const next = chapters.find((chapter) => chapter.startTime > current + 0.05);
       const to = next ? next.startTime : chapters.length ? duration : 0;
-      this.#next.textContent = chapters.length ? `${next ? 'Next' : 'End'} T− ${clock(Math.floor(to + 1e-3) - Math.floor(current + 1e-3))}` : '';
+      const left = clock(Math.floor(to + 1e-3) - Math.floor(current + 1e-3));
+      this.#next.textContent = chapters.length ? words.say(next ? 'clock.next' : 'clock.end', { time: left }) : '';
     }
     this.#button.setAttribute(
       'aria-label',
-      remaining ? 'Time remaining. Switch to elapsed time' : 'Elapsed time. Switch to time remaining'
+      words.say(remaining ? 'clock.remaining.name' : 'clock.elapsed.name')
     );
   }
 }
@@ -2112,20 +2169,21 @@ class AscentFeedElement extends PathElement {
   }
 }
 
-const MANUAL: readonly (readonly [string[], string])[] = [
-  [['Space', 'K'], 'Launch or hold'],
-  [['←', '→'], 'Back / forward 5 s'],
-  [['PgUp', 'PgDn'], 'Jump 10%'],
-  [['Home', 'End'], 'Start or end'],
-  [['1–9'], 'Fly to event'],
-  [['N'], 'Next event'],
-  [['↑', '↓'], 'Volume'],
-  [['M'], 'Mute'],
-  [['<', '>'], 'Speed'],
-  [['C'], 'Captions'],
-  [['F'], 'Full screen'],
-  [['P'], 'Picture in picture'],
-  [['?'], 'This card'],
+/** The card's rows: the keys, then what they do. A key written as a word ("Space") is translated too. */
+const MANUAL: readonly (readonly [string[], WordKey])[] = [
+  [['key.space', 'K'], 'manual.play'],
+  [['←', '→'], 'manual.seek'],
+  [['PgUp', 'PgDn'], 'manual.jump'],
+  [['Home', 'End'], 'manual.ends'],
+  [['1–9'], 'manual.event'],
+  [['N'], 'manual.next'],
+  [['↑', '↓'], 'manual.volume'],
+  [['M'], 'manual.mute'],
+  [['<', '>'], 'manual.speed'],
+  [['C'], 'manual.captions'],
+  [['F'], 'manual.full'],
+  [['P'], 'manual.pip'],
+  [['?'], 'manual.card'],
 ];
 
 /**
@@ -2135,6 +2193,7 @@ const MANUAL: readonly (readonly [string[], string])[] = [
  */
 class AscentManualElement extends UIElement {
   #tracks = new PlayerController(this, playerContext, selectTextTrack);
+  #words = new Words(this);
   #abort: AbortController | null = null;
   #card?: HTMLElement;
   #close?: HTMLButtonElement;
@@ -2208,18 +2267,40 @@ class AscentManualElement extends UIElement {
     }
   }
 
+  protected update(changed: PropertyValues) {
+    super.update(changed);
+    this.#fill();
+  }
+
+  /** Writes the card's words, and the name of the desk's "?" key, in the player's language. */
+  #fill() {
+    for (const el of this.querySelectorAll<HTMLElement>('[data-w]')) {
+      const text = this.#words.say(el.dataset.w as WordKey);
+      if (el.textContent !== text) el.textContent = text;
+    }
+    const name = this.#words.say('manual.name');
+    skinRoot(this)
+      ?.querySelectorAll('[data-asc-manual]')
+      .forEach((key) => {
+        if (key.getAttribute('aria-label') !== name) key.setAttribute('aria-label', name);
+      });
+  }
+
   #build() {
     const title = nextId('asc-manual');
     this.innerHTML = `<div class="asc-dialog-backdrop asc-manual-backdrop"></div>
 <div class="asc-dialog asc-manual" role="dialog" aria-modal="true" aria-labelledby="${title}">
-<span class="lab asc-dialog-kicker" aria-hidden="true">Flight manual</span>
-<h2 class="lab asc-dialog-title" id="${title}">Keyboard</h2>
+<span class="lab asc-dialog-kicker" aria-hidden="true" data-w="manual.kicker"></span>
+<h2 class="lab asc-dialog-title" id="${title}" data-w="manual.title"></h2>
 <dl class="asc-manual-list">${MANUAL.map(
       ([keys, what]) =>
-        `<div${keys[0] === '1–9' ? ' data-asc-events' : ''}><dt>${keys.map((k) => `<kbd>${k}</kbd>`).join('')}</dt><dd>${what}</dd></div>`
+        `<div${keys[0] === '1–9' ? ' data-asc-events' : ''}><dt>${keys
+          .map((k) => (k.startsWith('key.') ? `<kbd data-w="${k}"></kbd>` : `<kbd>${k}</kbd>`))
+          .join('')}</dt><dd data-w="${what}"></dd></div>`
     ).join('')}</dl>
-<button type="button" class="asc-dialog-close">Close <kbd>Esc</kbd></button>
+<button type="button" class="asc-dialog-close"><span data-w="manual.close"></span> <kbd>Esc</kbd></button>
 </div>`;
+    this.#fill();
     this.#card = this.querySelector<HTMLElement>('.asc-manual')!;
     this.#close = this.querySelector<HTMLButtonElement>('.asc-dialog-close')!;
     this.#close.addEventListener('click', () => this.toggle(false));
