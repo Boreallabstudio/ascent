@@ -180,7 +180,24 @@ a:focus-visible {
   top: -31px;
   right: var(--gutter);
   display: flex;
+  align-items: center;
   gap: 2px;
+}
+
+/* Says what the switch changes: the player, not the page. */
+.site-lang span {
+  margin-right: 6px;
+  color: var(--dim);
+  font: 400 11px var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* On phones the cue needs the room. */
+@media (max-width: 599.9px) {
+  .site-lang span {
+    display: none;
+  }
 }
 
 .site-lang button {

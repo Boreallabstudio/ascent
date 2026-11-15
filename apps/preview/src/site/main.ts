@@ -36,4 +36,12 @@ try {
   saved = null;
 }
 setLanguage(new URLSearchParams(location.search).get('lang') ?? saved ?? 'en', false);
-buttons.forEach((button) => button.addEventListener('click', () => setLanguage(button.dataset.lang!, true)));
+buttons.forEach((button) =>
+  button.addEventListener('click', () => {
+    setLanguage(button.dataset.lang!, true);
+    // Keep the address in step, so a reload or a shared link opens in the language chosen.
+    const url = new URL(location.href);
+    url.searchParams.set('lang', button.dataset.lang!);
+    history.replaceState(history.state, '', url);
+  })
+);
