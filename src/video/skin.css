@@ -1518,7 +1518,8 @@ ascent-engine:hover .pm {
 }
 
 .asc-nx .lab {
-  max-width: 15cqw;
+  /* A long event name never widens the module into the clock. */
+  max-width: 11cqw;
   overflow: hidden;
   font-size: clamp(10px, 0.8cqw, 15px);
   text-overflow: ellipsis;
@@ -1554,6 +1555,17 @@ ascent-engine:hover .pm {
   text-transform: uppercase;
   white-space: nowrap;
   opacity: 0.62;
+}
+
+/* The "· of 00:34" part of the clock's heading; narrow desks drop it so the heading clears the keys. */
+.asc-clock .of {
+  font-style: normal;
+}
+
+@container (max-width: 979.9px) {
+  .asc-clock .of {
+    display: none;
+  }
 }
 
 /* The next event's countdown under the clock: small players only, where the Next event module is not shown. */

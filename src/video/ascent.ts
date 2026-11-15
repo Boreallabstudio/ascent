@@ -1318,10 +1318,13 @@ class AscentEngineElement extends UIElement {
       const rate = this.#rate.value?.playbackRate ?? 1;
       if (this.#pending === rate) this.#pending = null;
       const f = (rate - 0.5) / 1.5;
-      this.#show(f, rateText(Math.min(2, Math.max(0.5, rate))));
+      this.#show(f, rateText(Math.min(2, Math.max(0.5, rate)), this.#words.locale));
       this.setAttribute('aria-valuenow', String(rate));
       this.setAttribute('aria-label', this.#words.say('speed.name'));
-      this.setAttribute('aria-valuetext', this.#words.say('speed.value', { rate: this.#words.number(rate) }));
+      this.setAttribute(
+        'aria-valuetext',
+        rate === 1 ? this.#words.say('speed.normal') : this.#words.say('speed.value', { rate: this.#words.number(rate) })
+      );
       this.hidden = this.#rate.value?.playbackRateAvailability === 'unsupported';
     } else {
       const volume = this.#volume.value;
@@ -1360,10 +1363,11 @@ class AscentEngineElement extends UIElement {
 /** <ascent-rate>: the speed pill's text, 1.0× style. The `<media-playback-rate-button>` around it does the work. */
 class AscentRateElement extends UIElement {
   #rate = new PlayerController(this, playerContext, selectPlaybackRate);
+  #words = new Words(this);
 
   protected update(changed: PropertyValues) {
     super.update(changed);
-    this.textContent = rateText(this.#rate.value?.playbackRate ?? 1);
+    this.textContent = rateText(this.#rate.value?.playbackRate ?? 1, this.#words.locale);
   }
 }
 
@@ -1410,7 +1414,7 @@ class AscentPlayLabelElement extends UIElement {
  */
 const readings = new WeakMap<HTMLMediaElement, { bps: number; at: number }>();
 
-function downlink(media: HTMLMediaElement | null): { rate: string; complete: boolean; fresh: boolean } {
+function downlink(media: HTMLMediaElement | null, locale = 'en'): { rate: string; complete: boolean; fresh: boolean } {
   if (!media) return { rate: '', complete: false, fresh: false };
   const duration = media.duration;
   let complete = false;
@@ -1426,7 +1430,8 @@ function downlink(media: HTMLMediaElement | null): { rate: string; complete: boo
   let fresh = false;
   if (typeof bps === 'number' && Number.isFinite(bps) && bps > 0) {
     const mbps = bps / 1e6;
-    rate = `${mbps < 10 ? mbps.toFixed(1) : Math.round(mbps)} Mb/s`;
+    const digits = mbps < 10 ? 1 : 0;
+    rate = `${new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(mbps)} Mb/s`;
     // The estimate only moves when a piece of the film finishes loading; note when it last did.
     const now = performance.now();
     const last = readings.get(media);
@@ -1529,7 +1534,7 @@ class AscentBoardElement extends UIElement {
     // Downlink: Lost on an error, Hold while the film buffers, then the link rate while the film is still coming in,
     // and Locked once everything to the end of the film is loaded.
     const root = skinRoot(this);
-    const link = downlink(root ? findMedia(root) : null);
+    const link = downlink(root ? findMedia(root) : null, this.#words.locale);
     const say = (key: WordKey) => this.#words.say(key);
     const names: Record<string, WordKey> = {
       Downlink: 'board.downlink',
@@ -1558,7 +1563,7 @@ class AscentBoardElement extends UIElement {
     const line = root?.querySelector('.asc-load span');
     if (line) line.textContent = `${say('hold.line')}${held && link.fresh ? ` · ${link.rate}` : ''}`;
     this.#set('Audio', quiet ? 'off' : 'go', quiet ? off : go);
-    this.#set('Captions', captions ? 'go' : 'off', captions ? go : off);
+    this.#set('Captions', captions ? 'go' : 'off', captions ? go : say('board.captions.off'));
     if (this.#phase === 'standby' && playing) this.#runPoll();
     const flight = this.#cells.Flight;
     const polled = flight?.hasAttribute('data-polled') ?? false;
@@ -1641,6 +1646,7 @@ class AscentClockElement extends UIElement {
   #tracks = new PlayerController(this, playerContext, selectTextTrack);
   #words = new Words(this);
   #next?: HTMLElement;
+  #of?: HTMLElement;
   #remaining = false;
   #button?: HTMLButtonElement;
   #label?: HTMLElement;
@@ -1676,7 +1682,15 @@ class AscentClockElement extends UIElement {
       ? `−${clock(Math.floor(duration + 1e-3) - Math.floor(Math.min(current, duration) + 1e-3))}`
       : clock(Math.min(current, duration));
     const words = this.#words;
-    this.#label.textContent = words.say(remaining ? 'clock.remaining' : 'clock.elapsed', { total: clock(duration) });
+    // "T+ elapsed · of 00:34"; the "of" part steps aside on narrow desks, where the label would run into the keys.
+    const head = words.say(remaining ? 'clock.remaining' : 'clock.elapsed');
+    const of = ` · ${words.say('clock.of', { total: clock(duration) })}`;
+    if (this.#label.firstChild?.textContent !== head || this.#of?.textContent !== of) {
+      this.#of ??= document.createElement('em');
+      this.#of.className = 'of';
+      this.#of.textContent = of;
+      this.#label.replaceChildren(head, this.#of);
+    }
     if (this.#next) {
       const chapters = this.#tracks.value?.chaptersCues ?? [];
       const next = chapters.find((chapter) => chapter.startTime > current + 0.05);
@@ -2173,8 +2187,8 @@ class AscentFeedElement extends PathElement {
 const MANUAL: readonly (readonly [string[], WordKey])[] = [
   [['key.space', 'K'], 'manual.play'],
   [['←', '→'], 'manual.seek'],
-  [['PgUp', 'PgDn'], 'manual.jump'],
-  [['Home', 'End'], 'manual.ends'],
+  [['key.pgup', 'key.pgdn'], 'manual.jump'],
+  [['key.home', 'key.end'], 'manual.ends'],
   [['1–9'], 'manual.event'],
   [['N'], 'manual.next'],
   [['↑', '↓'], 'manual.volume'],
@@ -2298,7 +2312,7 @@ class AscentManualElement extends UIElement {
           .map((k) => (k.startsWith('key.') ? `<kbd data-w="${k}"></kbd>` : `<kbd>${k}</kbd>`))
           .join('')}</dt><dd data-w="${what}"></dd></div>`
     ).join('')}</dl>
-<button type="button" class="asc-dialog-close"><span data-w="manual.close"></span> <kbd>Esc</kbd></button>
+<button type="button" class="asc-dialog-close"><span data-w="manual.close"></span> <kbd data-w="key.esc"></kbd></button>
 </div>`;
     this.#fill();
     this.#card = this.querySelector<HTMLElement>('.asc-manual')!;

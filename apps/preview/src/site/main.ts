@@ -11,10 +11,29 @@ document.getElementById('player')!.append(i18n);
 document.querySelector('mux-video')?.addEventListener('play', () => document.body.setAttribute('data-launched', ''), { once: true });
 
 // The player's language: English, French or Spanish. Video.js translates its own controls; the skin brings its words.
+// `?lang=fr` opens the page in that language, and a choice is remembered for the next visit.
+const CUE: Record<string, string> = { en: 'Press Launch', fr: 'Appuyez sur Lancer', es: 'Pulsa Lanzar' };
 const buttons = document.querySelectorAll<HTMLButtonElement>('.site-lang button');
-buttons.forEach((button) =>
-  button.addEventListener('click', () => {
-    i18n.setAttribute('lang', button.dataset.lang!);
-    buttons.forEach((other) => other.setAttribute('aria-pressed', String(other === button)));
-  })
-);
+const cue = document.querySelector('.site-cue span');
+
+function setLanguage(lang: string, remember: boolean) {
+  if (!(lang in CUE)) return;
+  i18n.setAttribute('lang', lang);
+  if (cue) cue.textContent = CUE[lang];
+  buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.lang === lang)));
+  if (!remember) return;
+  try {
+    localStorage.setItem('ascent-lang', lang);
+  } catch {
+    // Storage can be blocked; the choice then lasts for this visit only.
+  }
+}
+
+let saved: string | null = null;
+try {
+  saved = localStorage.getItem('ascent-lang');
+} catch {
+  saved = null;
+}
+setLanguage(new URLSearchParams(location.search).get('lang') ?? saved ?? 'en', false);
+buttons.forEach((button) => button.addEventListener('click', () => setLanguage(button.dataset.lang!, true)));

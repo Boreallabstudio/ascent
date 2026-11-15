@@ -206,8 +206,20 @@ a:focus-visible {
 }
 
 .site-lang button[aria-pressed='true'] {
-  border-color: var(--rule);
+  border-color: var(--ink);
+  background: rgba(244, 241, 234, 0.1);
   color: var(--ink);
+}
+
+@media (pointer: coarse) {
+  .site-lang {
+    top: -38px;
+  }
+
+  .site-lang button {
+    min-width: 44px;
+    min-height: 32px;
+  }
 }
 
 .site-lang button:focus-visible {

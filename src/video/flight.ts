@@ -60,9 +60,10 @@ export function clock(seconds: number, round: (x: number) => number = Math.floor
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Playback rate as the skin writes it: 1.0×, 1.25×, 0.5×. */
-export function rateText(rate: number): string {
-  return `${rate.toFixed((rate * 4) % 2 ? 2 : 1)}×`;
+/** Playback rate as the skin writes it, in the player's language: 1.0×, 1.25×, 0.5× (1,0× in French). */
+export function rateText(rate: number, locale = 'en'): string {
+  const digits = (rate * 4) % 2 ? 2 : 1;
+  return `${new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(rate)}×`;
 }
 
 /** The engine-glow ramp: a dull ember at the low end, white-hot at full. */
